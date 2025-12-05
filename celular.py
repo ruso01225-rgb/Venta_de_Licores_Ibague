@@ -6,11 +6,12 @@ import os
 # ---------------------------------------------------------
 # 1. CONFIGURACIÓN
 # ---------------------------------------------------------
-st.set_page_config(page_title="Fenix Pedidos", page_icon="🔥", layout="centered")
+st.set_page_config(page_title="Ibaguiar Pedidos", page_icon="🔥", layout="centered")
+
 
 
 # =========================================================
-# 🟢 INICIO DE LA APLICACIÓN (SOLO SI LOGUEADO)
+# 🟢 INICIO DE LA APLICACIÓN
 # =========================================================
 
 # ⚠️ TU URL DE GOOGLE APPS SCRIPT
@@ -19,12 +20,10 @@ URL_SHEETS = "https://script.google.com/macros/s/AKfycbzEa9UwrBhOVaA1QR6ui5VRUTz
 # ARCHIVOS LOCALES
 ARCHIVO_DB = "productos_db.csv"
 ARCHIVO_CONSECUTIVO = "consecutivo.txt"
-
-# 🔒 CONTRASEÑA DE ADMINISTRADOR (Para editar productos)
 PASSWORD_ADMIN = "1234"  
 
 # ---------------------------------------------------------
-# 2. LISTA MAESTRA INICIAL (FORMATO: [PRECIO, STOCK])
+# 2. LISTA MAESTRA INICIAL
 # ---------------------------------------------------------
 PRODUCTOS_INICIALES_DICT = {
     # --- Aguardientes ---
@@ -38,13 +37,11 @@ PRODUCTOS_INICIALES_DICT = {
     "Aguardiente Tapa Rosado": [78000, 20],
     "Aguardiente Botella Nectar verde": [50000, 20],
     "Aguardiente Nectar verde media": [33000, 20],
-
     # --- Rones ---
     "Ron Mojito": [55000, 20],
     "Ron Bacardi Limon": [55000, 20],
     "Ron Botella Viejo de Caldas": [65000, 20],
     "Ron Viejo de Caldas media": [35000, 20],
-
     # --- Cervezas ---
     "Cerveza Six Heineken": [21000, 20],
     "Cerveza Six Corona 355": [30000, 20],
@@ -56,13 +53,11 @@ PRODUCTOS_INICIALES_DICT = {
     "Cerveza Six Light Aguila": [23000, 20],
     "Cerveza Sixpack Club Colombia": [24000, 20],
     "Cerveza Six Budweiser": [17000, 20],
-
     # --- Otros Licores / Bebidas ---
     "Four Loco Sandia": [15000, 20],
     "Four Loco Purple": [15000, 20],
     "Four Loco Blue": [15000, 20],
     "Four Loco Gold": [15000, 20],
-
     # --- Cigarrillos ---
     "Cigarrillo Mustang": [8000, 20],
     "Cigarrillo Marlboro Rojo": [9000, 20],
@@ -72,7 +67,6 @@ PRODUCTOS_INICIALES_DICT = {
     "Cigarrillo Lucky Verde": [9000, 20],
     "Cigarrillo Lucky Alaska": [9000, 20],
     "Cigarrillo Green": [8000, 20],
-
     # --- Whiskys ---
     "Whisky Jack Daniels": [147000, 20],
     "Whisky Jack Daniels Honey": [147000, 20],
@@ -89,13 +83,11 @@ PRODUCTOS_INICIALES_DICT = {
     "Whisky Sello Rojo Litro": [104000, 20],
     "Whisky Sello Rojo Botella": [80000, 20],
     "Whisky Sello Rojo Media": [51000, 20],
-
     # --- Cremas ---
     "Crema de Whisky Black Jack": [58000, 20],
     "Crema de Whisky Baileys Litro": [116000, 20],
     "Crema de Whisky Baileys Botella": [85000, 20],
     "Crema de Whisky Baileys Media": [53000, 20],
-
     # --- Tequilas / Ginebra / Vodka ---
     "Tequila Jose Cuervo Botella": [96000, 20],
     "Tequila Jose Cuervo Media": [60000, 20],
@@ -111,7 +103,6 @@ PRODUCTOS_INICIALES_DICT = {
     "Smirnoff Lulo Botella": [52000, 20],
     "Smirnoff Lulo Media": [29000, 20],
     "Jagermaister Hiervas": [130000, 20],
-
     # --- Vinos ---
     "Vino Gato Tinto Tetrapack": [27000, 20],
     "Vino Gato Negro Merlot": [47000, 20],
@@ -127,7 +118,6 @@ PRODUCTOS_INICIALES_DICT = {
     "Vino Espumoso JP Chanet Syrah": [65000, 20],
     "Vino Espumoso JP Chanet Brut": [65000, 20],
     "Vino Espumoso JP Chanet Chardonnay": [65000, 20],
-
     # --- Bebidas sin Alcohol / Energizantes ---
     "Gatorade": [5000, 20],
     "Agua con Gas": [2500, 20],
@@ -139,7 +129,6 @@ PRODUCTOS_INICIALES_DICT = {
     "Jugo Naranja Del Valle": [7000, 20],
     "Electrolit Naran/Mandarina": [9500, 20],
     "Electrolit Maracuya": [9500, 20],
-
     # --- Snacks / Varios ---
     "Detodito Natural 165gr": [8500, 20],
     "Detodito BBQ 165gr": [8500, 20],
@@ -158,17 +147,9 @@ PRODUCTOS_INICIALES_DICT = {
 # 3. GESTIÓN DE BASE DE DATOS Y CONSECUTIVO
 # ---------------------------------------------------------
 
-# --- PRODUCTOS ---
 def cargar_productos():
-    """Carga CSV o crea usando el diccionario maestro."""
     if not os.path.exists(ARCHIVO_DB):
-        data_list = []
-        for prod, valores in PRODUCTOS_INICIALES_DICT.items():
-            data_list.append({
-                "Producto": prod, 
-                "Precio": valores[0], 
-                "Stock": valores[1]
-            })
+        data_list = [{"Producto": p, "Precio": v[0], "Stock": v[1]} for p, v in PRODUCTOS_INICIALES_DICT.items()]
         df = pd.DataFrame(data_list)
         df.to_csv(ARCHIVO_DB, index=False)
         return df
@@ -176,13 +157,7 @@ def cargar_productos():
         try:
             return pd.read_csv(ARCHIVO_DB)
         except:
-            data_list = []
-            for prod, valores in PRODUCTOS_INICIALES_DICT.items():
-                data_list.append({
-                    "Producto": prod, 
-                    "Precio": valores[0], 
-                    "Stock": valores[1]
-                })
+            data_list = [{"Producto": p, "Precio": v[0], "Stock": v[1]} for p, v in PRODUCTOS_INICIALES_DICT.items()]
             df = pd.DataFrame(data_list)
             df.to_csv(ARCHIVO_DB, index=False)
             return df
@@ -190,21 +165,14 @@ def cargar_productos():
 def guardar_productos(df):
     df.to_csv(ARCHIVO_DB, index=False)
 
-# --- CONSECUTIVO FACTURA ---
 def obtener_siguiente_factura():
-    """Lee el número actual del archivo o inicia en 3001."""
-    if not os.path.exists(ARCHIVO_CONSECUTIVO):
-        return 3001
+    if not os.path.exists(ARCHIVO_CONSECUTIVO): return 3001
     try:
-        with open(ARCHIVO_CONSECUTIVO, "r") as f:
-            return int(f.read().strip())
-    except:
-        return 3001
+        with open(ARCHIVO_CONSECUTIVO, "r") as f: return int(f.read().strip())
+    except: return 3001
 
 def actualizar_factura_siguiente(nuevo_numero):
-    """Guarda el nuevo número para la PRÓXIMA factura."""
-    with open(ARCHIVO_CONSECUTIVO, "w") as f:
-        f.write(str(nuevo_numero))
+    with open(ARCHIVO_CONSECUTIVO, "w") as f: f.write(str(nuevo_numero))
 
 # Inicialización
 df_productos = cargar_productos()
@@ -215,168 +183,117 @@ STOCK_DISPONIBLE = dict(zip(df_productos["Producto"], df_productos["Stock"]))
 # 4. PANEL DE ADMINISTRACIÓN (SIDEBAR)
 # ---------------------------------------------------------
 with st.sidebar:
-    st.header("⚙️ Configuración")
-    
+    st.header("⚙️ Admin")
     activar_admin = st.checkbox("Administrar Productos")
     
     if activar_admin:
-        password = st.text_input("Contraseña de Admin", type="password")
+        password = st.text_input("Contraseña", type="password")
         
         if password == PASSWORD_ADMIN:
-            st.success("Modo Administrador Activo")
-            
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["📦 Stock", "➕ Crear", "✏️ Editar", "🗑️ Borrar", "📂 Masivo"])
+            st.success("Acceso Admin")
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Stock", "Crear", "Editar", "Borrar", "CSV"])
             
             with tab1:
-                st.subheader("Gestión de Stock")
-                st.info("Edita el stock directamente en la tabla:")
+                st.info("Editar Stock:")
                 df_stock_edit = st.data_editor(
                     df_productos[["Producto", "Stock"]],
                     column_config={
                         "Producto": st.column_config.TextColumn(disabled=True),
-                        "Stock": st.column_config.NumberColumn("Unidades", min_value=0, step=1)
+                        "Stock": st.column_config.NumberColumn("Unds", min_value=0, step=1)
                     },
                     hide_index=True,
                     key="editor_stock_admin"
                 )
-                if st.button("💾 Guardar Stock"):
+                if st.button("💾 Guardar"):
                     for index, row in df_stock_edit.iterrows():
-                        nombre_prod = row["Producto"]
-                        nuevo_stock = row["Stock"]
-                        df_productos.loc[df_productos["Producto"] == nombre_prod, "Stock"] = nuevo_stock
+                        df_productos.loc[df_productos["Producto"] == row["Producto"], "Stock"] = row["Stock"]
                     guardar_productos(df_productos)
-                    st.success("Stock actualizado correctamente")
+                    st.success("Guardado")
                     st.rerun()
 
             with tab2:
-                st.subheader("Nuevo Producto")
                 new_name = st.text_input("Nombre", key="new_name")
-                col_n1, col_n2 = st.columns(2)
-                with col_n1:
-                    new_price = st.number_input("Precio", min_value=0, step=500, key="new_price")
-                with col_n2:
-                    new_stock = st.number_input("Stock Inicial", min_value=0, step=1, key="new_stock_init")
+                c_n1, c_n2 = st.columns(2)
+                with c_n1: new_price = st.number_input("Precio", min_value=0, step=500, key="new_price")
+                with c_n2: new_stock = st.number_input("Stock", min_value=0, step=1, key="new_stock_init")
                 
-                if st.button("Guardar Nuevo"):
-                    if new_name:
-                        if new_name in df_productos["Producto"].values:
-                            st.error("¡Ese producto ya existe!")
-                        else:
-                            nuevo_row = pd.DataFrame([{"Producto": new_name, "Precio": new_price, "Stock": new_stock}])
-                            df_productos = pd.concat([df_productos, nuevo_row], ignore_index=True)
-                            guardar_productos(df_productos)
-                            st.success(f"Creado: {new_name}")
-                            st.rerun()
-                    else:
-                        st.warning("Escribe un nombre.")
+                if st.button("Crear"):
+                    if new_name and new_name not in df_productos["Producto"].values:
+                        nuevo_row = pd.DataFrame([{"Producto": new_name, "Precio": new_price, "Stock": new_stock}])
+                        df_productos = pd.concat([df_productos, nuevo_row], ignore_index=True)
+                        guardar_productos(df_productos)
+                        st.success("Creado")
+                        st.rerun()
 
             with tab3:
-                st.subheader("Editar Datos")
                 lista_prods = sorted(list(df_productos["Producto"]))
-                prod_a_editar = st.selectbox("Producto a editar", ["Seleccionar..."] + lista_prods)
+                prod_a_editar = st.selectbox("Editar:", ["Seleccionar..."] + lista_prods)
                 if prod_a_editar != "Seleccionar...":
-                    row_actual = df_productos[df_productos["Producto"] == prod_a_editar].iloc[0]
-                    precio_actual = int(row_actual["Precio"])
-                    stock_actual = int(row_actual.get("Stock", 0))
-                    
-                    st.write("Modificar valores:")
+                    row = df_productos[df_productos["Producto"] == prod_a_editar].iloc[0]
                     edit_name = st.text_input("Nombre", value=prod_a_editar)
                     c_e1, c_e2 = st.columns(2)
-                    with c_e1:
-                        edit_price = st.number_input("Precio", value=precio_actual, step=500)
-                    with c_e2:
-                        edit_stock = st.number_input("Stock", value=stock_actual, step=1)
-                    
-                    if st.button("Actualizar Producto"):
+                    with c_e1: e_price = st.number_input("Precio", value=int(row["Precio"]), step=500)
+                    with c_e2: e_stock = st.number_input("Stock", value=int(row.get("Stock",0)), step=1)
+                    if st.button("Actualizar"):
                         idx = df_productos.index[df_productos["Producto"] == prod_a_editar][0]
                         df_productos.at[idx, "Producto"] = edit_name
-                        df_productos.at[idx, "Precio"] = edit_price
-                        df_productos.at[idx, "Stock"] = edit_stock
+                        df_productos.at[idx, "Precio"] = e_price
+                        df_productos.at[idx, "Stock"] = e_stock
                         guardar_productos(df_productos)
-                        st.success("¡Producto Actualizado!")
                         st.rerun()
 
             with tab4:
-                st.subheader("Eliminar Producto")
-                prod_a_borrar = st.selectbox("Selecciona para borrar", ["Seleccionar..."] + sorted(list(df_productos["Producto"])), key="del_select")
-                if st.button("🗑️ Eliminar Definitivamente", type="primary"):
-                    if prod_a_borrar != "Seleccionar...":
-                        df_productos = df_productos[df_productos["Producto"] != prod_a_borrar]
+                prod_del = st.selectbox("Borrar:", ["Seleccionar..."] + sorted(list(df_productos["Producto"])), key="del_sel")
+                if st.button("Eliminar"):
+                    if prod_del != "Seleccionar...":
+                        df_productos = df_productos[df_productos["Producto"] != prod_del]
                         guardar_productos(df_productos)
-                        st.warning(f"Eliminado: {prod_a_borrar}")
                         st.rerun()
 
             with tab5:
-                st.subheader("📂 Edición Masiva")
-                st.markdown("1. **Descarga** tu inventario actual.\n2. Edítalo en Excel.\n3. **Sube** el archivo actualizado.")
                 with open(ARCHIVO_DB, "rb") as f:
-                    st.download_button(
-                        label="⬇️ Descargar Inventario (CSV)",
-                        data=f,
-                        file_name="inventario_fenix.csv",
-                        mime="text/csv"
-                    )
-                st.divider()
-                uploaded_file = st.file_uploader("⬆️ Subir CSV Actualizado", type=["csv"])
-                if uploaded_file is not None:
+                    st.download_button("⬇️ Descargar CSV", f, "inventario.csv", "text/csv")
+                uploaded = st.file_uploader("⬆️ Subir CSV", type=["csv"])
+                if uploaded and st.button("Reemplazar"):
                     try:
-                        df_nuevo = pd.read_csv(uploaded_file)
-                        required_cols = ["Producto", "Precio", "Stock"]
-                        if all(col in df_nuevo.columns for col in required_cols):
-                            if st.button("✅ Confirmar y Reemplazar Inventario"):
-                                guardar_productos(df_nuevo)
-                                st.success("¡Base de datos actualizada!")
-                                st.rerun()
-                        else:
-                            st.error(f"El archivo debe tener las columnas: {required_cols}")
-                    except Exception as e:
-                        st.error(f"Error al leer el archivo: {e}")
-
+                        df_new = pd.read_csv(uploaded)
+                        if all(c in df_new.columns for c in ["Producto","Precio","Stock"]):
+                            guardar_productos(df_new)
+                            st.rerun()
+                    except: pass
         elif password:
-            st.error("Contraseña incorrecta")
+            st.error("Error")
 
 # ---------------------------------------------------------
-# 5. FUNCIONES DE ENVÍO Y INTERFAZ CLIENTE
+# 5. INTERFAZ (OPTIMIZADA PARA MÓVIL)
 # ---------------------------------------------------------
 def enviar_a_sheets(data):
     try:
         headers = {"Content-Type": "application/json"}
         resp = requests.post(URL_SHEETS, json=data, headers=headers, timeout=20)
         return resp
-    except Exception as e:
-        return f"Error de conexión: {e}"
+    except Exception as e: return f"Error: {e}"
 
 st.title("🔥 Fenix Pedidos")
-
-# --- OBTENER NÚMERO DE FACTURA ---
 numero_factura_actual = obtener_siguiente_factura()
 
+# --- DATOS CLIENTE (VERTICAL STACK) ---
 with st.expander("👤 Datos del Cliente", expanded=False):
-    col_a, col_b = st.columns(2)
-    with col_a:
-        # CAMPO FACTURA AUTOMÁTICO Y BLOQUEADO
-        factura = st.text_input("Factura # (Automático)", value=str(numero_factura_actual), disabled=True)
-    with col_b:
-        celular = st.text_input("Celular")
+    c_f, c_t = st.columns(2)
+    with c_f: st.text_input("Factura #", value=str(numero_factura_actual), disabled=True)
+    with c_t: celular = st.text_input("Celular")
     
-    # --- CORRECCIÓN: Creamos 3 columnas para que queden alineados horizontalmente ---
-    col_c, col_d, col_e = st.columns(3)
-    
-    with col_c:
-        # He puesto "Sin Domicilio" etc, pero puedes cambiarlo a ["Domiciliario1", "Domiciliario2"] si prefieres
-        domiciliario = st.selectbox("Domiciliario", ["Sin Domicilio", "Juan", "Pedro", "Empresa"])
-    with col_d:
-        barrio = st.text_input("Barrio")
-    with col_e:
-        direccion = st.text_input("Dirección")
-        
+    # Apilados para mejor uso en móvil
+    domiciliario = st.selectbox("Domiciliario", ["Sin Domicilio", "Juan", "Pedro", "Empresa"])
+    barrio = st.text_input("Barrio")
+    direccion = st.text_input("Dirección")
     ubicacion = st.text_input("Ubicación")
-    observaciones = st.text_area("Observaciones", height=68)
+    observaciones = st.text_area("Notas", height=68)
 
 st.divider()
 
 # ---------------------------------------------------------
-# 6. CARRITO Y LÓGICA DE VENTA
+# 6. PEDIDO (INTERFAZ MÓVIL)
 # ---------------------------------------------------------
 st.subheader("🛒 Realizar Pedido")
 
@@ -384,166 +301,139 @@ if "carrito" not in st.session_state:
     st.session_state.carrito = pd.DataFrame(columns=["Producto","Precio","Cantidad","Total"])
     st.session_state.carrito = st.session_state.carrito.astype({"Producto":"str","Precio":"int","Cantidad":"int","Total":"int"})
 
-# --- BUSCADOR ---
-col1, col2, col3 = st.columns([3,1,1])
-with col1:
-    lista_ordenada = sorted(list(PRODUCTOS_DISPONIBLES.keys()))
-    opc = ["Seleccionar..."] + lista_ordenada
-    
-    # --- FUNCIÓN NUEVA: Formatear lista desplegable ---
-    def formato_opcion(opcion):
-        if opcion == "Seleccionar...":
-            return opcion
-        try:
-            p = float(PRODUCTOS_DISPONIBLES.get(opcion, 0))
-            return f"{opcion} (${p:,.0f})"
-        except:
-            return opcion
+# --- BUSCADOR OPTIMIZADO ---
+# Fila 1: Producto (Ancho completo)
+lista_ordenada = sorted(list(PRODUCTOS_DISPONIBLES.keys()))
+opc = ["Seleccionar..."] + lista_ordenada
+def fmt(x):
+    if x == "Seleccionar...": return x
+    try: return f"{x} (${float(PRODUCTOS_DISPONIBLES.get(x,0)):,.0f})"
+    except: return x
 
-    prod_sel = st.selectbox("Producto", opc, format_func=formato_opcion, label_visibility="collapsed")
+prod_sel = st.selectbox("Buscar Producto", opc, format_func=fmt)
 
-with col2:
-    cant_sel = st.number_input("Cant.", min_value=1, value=1, label_visibility="collapsed")
-with col3:
-    add_btn = st.button("➕", type="primary", use_container_width=True)
-
-# --- INFO VISUAL DE PRECIO SELECCIONADO ---
-if prod_sel != "Seleccionar...":
-    st.info(f"💰 Precio Unitario: **${PRODUCTOS_DISPONIBLES.get(prod_sel, 0):,.0f}**")
+# Fila 2: Cantidad y Botón (Mitad y mitad)
+c_cant, c_add = st.columns([1, 1])
+with c_cant:
+    cant_sel = st.number_input("Cantidad", min_value=1, value=1)
+with c_add:
+    st.write("") # Espaciador para alinear botón
+    st.write("") 
+    add_btn = st.button("➕ AGREGAR", type="primary", use_container_width=True)
 
 if add_btn and prod_sel != "Seleccionar...":
     precio = int(PRODUCTOS_DISPONIBLES[prod_sel])
     cant = int(cant_sel)
     df = st.session_state.carrito.copy()
-
     if prod_sel in df["Producto"].values:
         idx = df.index[df["Producto"] == prod_sel][0]
         df.loc[idx, "Cantidad"] = int(df.loc[idx, "Cantidad"]) + cant
         df.loc[idx, "Precio"] = precio 
         df.loc[idx, "Total"] = df.loc[idx, "Precio"] * df.loc[idx, "Cantidad"]
     else:
-        nuevo = pd.DataFrame([{
-            "Producto": prod_sel,
-            "Precio": precio,
-            "Cantidad": cant,
-            "Total": precio * cant
-        }])
+        nuevo = pd.DataFrame([{"Producto": prod_sel, "Precio": precio, "Cantidad": cant, "Total": precio * cant}])
         df = pd.concat([df, nuevo], ignore_index=True)
-    
     st.session_state.carrito = df
     st.rerun()
 
 # ---------------------------------------------------------
-# 7. TABLA DE CARRITO Y TOTALES
+# 7. CARRITO TIPO TARJETA (MEJOR PARA MÓVIL)
 # ---------------------------------------------------------
-st.write("Resumen:")
+st.markdown("### Resumen del Pedido")
 
-# --- ENCABEZADOS ---
-col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([3, 1.5, 1.5, 1.5, 0.5])
-col_h1.markdown("**Producto**")
-col_h2.markdown("**Precio**")
-col_h3.markdown("**Cant.**")
-col_h4.markdown("**Total**")
-col_h5.markdown("")
+if st.session_state.carrito.empty:
+    st.info("El carrito está vacío")
+else:
+    idx_borrar = None
+    for i, row in st.session_state.carrito.iterrows():
+        # Tarjeta de producto
+        with st.container():
+            # Línea 1: Nombre del producto destacado
+            st.markdown(f"**{row['Producto']}**")
+            
+            # Línea 2: Controles en una sola fila
+            c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
+            
+            # Precio Unitario
+            c1.caption("Precio")
+            c1.write(f"${row['Precio']:,.0f}")
+            
+            # Cantidad Editable
+            nueva_cant = c2.number_input("Cant", min_value=1, value=int(row["Cantidad"]), key=f"q_{i}", label_visibility="collapsed")
+            if nueva_cant != row["Cantidad"]:
+                st.session_state.carrito.at[i, "Cantidad"] = nueva_cant
+                st.session_state.carrito.at[i, "Total"] = nueva_cant * row["Precio"]
+                st.rerun()
+            
+            # Total
+            total_fila = nueva_cant * row["Precio"]
+            c3.caption("Total")
+            c3.write(f"**${total_fila:,.0f}**")
+            
+            # Borrar
+            c4.write("")
+            if c4.button("🗑️", key=f"d_{i}"):
+                idx_borrar = i
+            
+        st.divider()
 
-# Variable para controlar qué borrar
-idx_borrar = None
-
-# --- FILAS DEL CARRITO ---
-for i, row in st.session_state.carrito.iterrows():
-    c1, c2, c3, c4, c5 = st.columns([3, 1.5, 1.5, 1.5, 0.5])
-    
-    # 1. Nombre
-    c1.write(row["Producto"])
-    
-    # 2. Precio
-    c2.write(f"${row['Precio']:,.0f}")
-    
-    # 3. Cantidad (Editable)
-    nueva_cant = c3.number_input(
-        "Cant", 
-        min_value=1, 
-        value=int(row["Cantidad"]), 
-        key=f"qty_{i}", 
-        label_visibility="collapsed"
-    )
-    
-    # Actualizar estado si cambia la cantidad
-    if nueva_cant != row["Cantidad"]:
-        st.session_state.carrito.at[i, "Cantidad"] = nueva_cant
-        st.session_state.carrito.at[i, "Total"] = nueva_cant * row["Precio"]
+    if idx_borrar is not None:
+        st.session_state.carrito = st.session_state.carrito.drop(idx_borrar).reset_index(drop=True)
         st.rerun()
 
-    # 4. Total Fila
-    total_fila = nueva_cant * row["Precio"]
-    c4.write(f"${total_fila:,.0f}")
-    
-    # 5. Botón BORRAR (Icono)
-    if c5.button("🗑️", key=f"del_{i}", help="Eliminar"):
-        idx_borrar = i
-
-# --- LÓGICA DE BORRADO ---
-if idx_borrar is not None:
-    st.session_state.carrito = st.session_state.carrito.drop(idx_borrar).reset_index(drop=True)
-    st.rerun()
-
-# Definir clean_df para compatibilidad con el resto del código
+# ---------------------------------------------------------
+# 8. TOTALES Y PAGO
+# ---------------------------------------------------------
 clean_df = st.session_state.carrito.copy()
+suma_productos = int(clean_df["Total"].sum()) if not clean_df.empty else 0
 
-# Totales
-st.divider()
-suma_productos = int(clean_df["Total"].sum())
-st.subheader("💰 Totales")
-
-valor_domicilio = st.number_input("Valor Domicilio", min_value=0, step=1000, value=7000, key="val_domi_input")
-medio_pago = st.selectbox("Medio de Pago", ["Efectivo", "Nequi", "DaviPlata", "Datafono"], key="medio_pago_input")
+valor_domicilio = st.number_input("🛵 Domicilio", min_value=0, step=1000, value=7000)
+medio_pago = st.selectbox("💳 Medio de Pago", ["Efectivo", "Nequi", "DaviPlata", "Datafono"], key="medio_pago_input")
 
 total_final = suma_productos + int(valor_domicilio)
 
 st.markdown(f"""
-<div style="text-align:center; font-size:32px; font-weight:700; padding:12px; margin-top:10px; border-radius:10px; background:#e8fff1; color:#004d29;">
+<div style="text-align:center; font-size:32px; font-weight:700; padding:15px; border-radius:12px; background:#e8fff1; color:#004d29; margin-bottom: 20px;">
 TOTAL: ${total_final:,.0f}
 </div>
 """, unsafe_allow_html=True)
 
 total_datafono = ""
 if medio_pago == "Datafono":
-    valor_dat_calculado = int(total_final * 1.06)
-    st.markdown("""<div style="font-size:16px; font-weight:900; color:#8B0000; background:#FFE4E4; border:2px solid #E57373; padding:12px 5px; border-radius:10px; text-align:center; margin-top:18px; margin-bottom:10px;">💳 Pago con Datafono (6% adicional)</div>""", unsafe_allow_html=True)
-    total_datafono = st.number_input("Valor Datafono", value=valor_dat_calculado, step=500, key="datafono_valor")
-    st.markdown(f"""<div style="font-size:24px; color:#333; text-align:center; margin-top:6px;">Cálculo automático:<br><b>${total_final:,.0f}</b> × <b>6%</b> = <b style="color:#C62828;">${valor_dat_calculado:,.0f}</b></div>""", unsafe_allow_html=True)
+    valor_dat = int(total_final * 1.06)
+    st.warning(f"Pago con Datafono (+6%): **${valor_dat:,.0f}**")
+    total_datafono = st.number_input("Cobrar en Datafono:", value=valor_dat)
 
 # ---------------------------------------------------------
-# 8. BOTÓN DE ENVÍO FINAL
+# 9. ENVIAR
 # ---------------------------------------------------------
 if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
-    productos_envio = []
-    
-    for _, row in clean_df.iterrows():
-        productos_envio.append({
-            "Producto": str(row["Producto"]),
-            "Precio": str(row["Precio"]),
-            "Cantidad": str(row["Cantidad"]),
-            "Total": str(row["Total"])
-        })
-    
-    if not productos_envio:
+    if clean_df.empty:
         st.error("⚠️ Carrito vacío")
     else:
-        # Aquí usamos la variable 'factura' (que es el número automático)
+        # Preparar JSON
+        prods = []
+        for _, row in clean_df.iterrows():
+            prods.append({
+                "Producto": str(row["Producto"]),
+                "Precio": str(row["Precio"]),
+                "Cantidad": str(row["Cantidad"]),
+                "Total": str(row["Total"])
+            })
+            
         data_json = {
-            "MedioPago":      medio_pago,
-            "ValorTotalV":    str(total_final),
-            "ValorDomi":      str(valor_domicilio),
-            "TotalData":      total_datafono,
-            "Factura":        factura, 
-            "Domiciliario":   domiciliario,
-            "Celular":        celular,
-            "Barrio":         barrio,
-            "Direccion":      direccion,
-            "Ubicacion":      ubicacion,
-            "Observaciones":  observaciones,
-            "Productos":      productos_envio
+            "MedioPago": medio_pago,
+            "ValorTotalV": str(total_final),
+            "ValorDomi": str(valor_domicilio),
+            "TotalData": total_datafono,
+            "Factura": str(numero_factura_actual),
+            "Domiciliario": domiciliario,
+            "Celular": celular,
+            "Barrio": barrio,
+            "Direccion": direccion,
+            "Ubicacion": ubicacion,
+            "Observaciones": observaciones,
+            "Productos": prods
         }
         
         with st.spinner("Enviando..."):
@@ -551,36 +441,27 @@ if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
         
         if hasattr(res, 'status_code') and res.status_code == 200:
             st.balloons()
-            st.success(f"✅ Pedido #{factura} enviado correctamente")
+            st.success(f"✅ Pedido #{numero_factura_actual} enviado!")
             
-            # 1. ACTUALIZAR STOCK
-            for item in productos_envio:
-                prod_name = item["Producto"]
-                qty = int(item["Cantidad"])
-                if prod_name in df_productos["Producto"].values:
-                    idx = df_productos.index[df_productos["Producto"] == prod_name][0]
-                    current = int(df_productos.at[idx, "Stock"])
-                    df_productos.at[idx, "Stock"] = max(0, current - qty)
+            # Actualizar Stock
+            for item in prods:
+                pn = item["Producto"]
+                cant = int(item["Cantidad"])
+                if pn in df_productos["Producto"].values:
+                    idx = df_productos.index[df_productos["Producto"] == pn][0]
+                    curr = int(df_productos.at[idx, "Stock"])
+                    df_productos.at[idx, "Stock"] = max(0, curr - cant)
             guardar_productos(df_productos)
             
-            # 2. ACTUALIZAR CONSECUTIVO (+1)
+            # Actualizar Factura
             actualizar_factura_siguiente(numero_factura_actual + 1)
             
-            # Limpiar carrito
+            # Limpiar
             st.session_state.carrito = pd.DataFrame(columns=["Producto","Precio","Cantidad","Total"])
-            
-            # --- NUEVO: Limpiar formulario (Datafono, Medio Pago, Domicilio) ---
-            if "medio_pago_input" in st.session_state:
-                del st.session_state["medio_pago_input"] # Vuelve a "Efectivo"
-            if "datafono_valor" in st.session_state:
-                del st.session_state["datafono_valor"]
-            if "val_domi_input" in st.session_state:
-                del st.session_state["val_domi_input"]
-            
+            if "medio_pago_input" in st.session_state: del st.session_state["medio_pago_input"]
             st.rerun()
         else:
             st.error("❌ Error al enviar")
-            st.write(res)
 
 
 
