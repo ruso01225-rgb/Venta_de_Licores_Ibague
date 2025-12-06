@@ -24,9 +24,9 @@ ARCHIVO_CONSECUTIVO = "consecutivo.txt"
 PASSWORD_ADMIN = "1234"
 
 # ---------------------------------------------------------
-# 2. FUNCIONES
+# 2. LISTA MAESTRA (GLOBAL)
 # ---------------------------------------------------------
-
+# La definimos aquí afuera para evitar errores de indentación
 PRODUCTOS_INICIALES_DICT = {
     # --- Aguardientes ---
     "Aguardiente Garrafa tapa roja": [98000, 20],
@@ -55,97 +55,23 @@ PRODUCTOS_INICIALES_DICT = {
     "Cerveza Six Light Aguila": [23000, 20],
     "Cerveza Sixpack Club Colombia": [24000, 20],
     "Cerveza Six Budweiser": [17000, 20],
-    # --- Otros Licores / Bebidas ---
+    # --- Otros ---
     "Four Loco Sandia": [15000, 20],
-    "Four Loco Purple": [15000, 20],
-    "Four Loco Blue": [15000, 20],
-    "Four Loco Gold": [15000, 20],
-    # --- Cigarrillos ---
     "Cigarrillo Mustang": [8000, 20],
     "Cigarrillo Marlboro Rojo": [9000, 20],
-    "Cigarrillo Boston": [8000, 20],
-    "Cigarrillo Marlboro Sandia": [9000, 20],
-    "Cigarrillo Marlboro Fusion": [9000, 20],
-    "Cigarrillo Lucky Verde": [9000, 20],
-    "Cigarrillo Lucky Alaska": [9000, 20],
-    "Cigarrillo Green": [8000, 20],
-    # --- Whiskys ---
     "Whisky Jack Daniels": [147000, 20],
-    "Whisky Jack Daniels Honey": [147000, 20],
-    "Whisky Chivas": [155000, 20],
-    "Whisky Buchannas Botella": [183000, 20],
-    "Whisky Buchannas Media": [104000, 20],
-    "Whisky Grans": [73000, 20],
-    "Whisky Old Parr Botella": [164000, 20],
-    "Whisky Old Parr Media": [116000, 20],
-    "Whisky Haig Club": [116000, 20],
-    "Whisky Black White Botella": [60000, 20],
-    "Whisky Black White Media": [33000, 20],
-    "Whisky Something Botella": [76000, 20],
-    "Whisky Sello Rojo Litro": [104000, 20],
-    "Whisky Sello Rojo Botella": [80000, 20],
-    "Whisky Sello Rojo Media": [51000, 20],
-    # --- Cremas ---
-    "Crema de Whisky Black Jack": [58000, 20],
-    "Crema de Whisky Baileys Litro": [116000, 20],
-    "Crema de Whisky Baileys Botella": [85000, 20],
-    "Crema de Whisky Baileys Media": [53000, 20],
-    # --- Tequilas / Ginebra / Vodka ---
-    "Tequila Jose Cuervo Botella": [96000, 20],
-    "Tequila Jose Cuervo Media": [60000, 20],
-    "Tequila Jimador Botella": [125000, 20],
-    "Tequila Jimador Media": [76000, 20],
-    "Ginebra Tanqueray": [135000, 20],
-    "Ginebra Bombay": [120000, 20],
-    "Vodka Absolut Litro": [120000, 20],
-    "Vodka Absolut Botella": [92000, 20],
-    "Vodka Absolut Media": [58000, 20],
-    "Smirnoff Ice Lata": [9500, 20],
-    "Smirnoff Manzana Lata": [9500, 20],
-    "Smirnoff Lulo Botella": [52000, 20],
-    "Smirnoff Lulo Media": [29000, 20],
-    "Jagermaister Hiervas": [130000, 20],
-    # --- Vinos ---
-    "Vino Gato Tinto Tetrapack": [27000, 20],
-    "Vino Gato Negro Merlot": [47000, 20],
-    "Vino Gato Negro Sauvignon": [47000, 20],
-    "Vino Gato Negro Malbec": [47000, 20],
-    "Vino Casillero del Diablo": [75000, 20],
-    "Vino Finca Las Moras Sauvignon": [58000, 20],
-    "Vino Finca Las Moras Malbec": [58000, 20],
-    "Vino Duvoned": [73000, 20],
-    "Vino Espumoso JP Chanet Blanco": [70000, 20],
-    "Vino Espumoso JP Chanet Rosado": [70000, 20],
-    "Vino Espumoso JP Chanet Morado": [70000, 20],
-    "Vino Espumoso JP Chanet Syrah": [65000, 20],
-    "Vino Espumoso JP Chanet Brut": [65000, 20],
-    "Vino Espumoso JP Chanet Chardonnay": [65000, 20],
-    # --- Bebidas sin Alcohol / Energizantes ---
     "Gatorade": [5000, 20],
-    "Agua con Gas": [2500, 20],
-    "Agua sin Gas": [2000, 20],
-    "Redbull": [7000, 20],
     "Coca Cola 1.5L": [7500, 20],
-    "Gaseosa Ginger 1.5L": [7500, 20],
-    "Gaseosa Soda Bretaña 1.5L": [7500, 20],
-    "Jugo Naranja Del Valle": [7000, 20],
-    "Electrolit Naran/Mandarina": [9500, 20],
-    "Electrolit Maracuya": [9500, 20],
-    # --- Snacks / Varios ---
-    "Detodito Natural 165gr": [8500, 20],
-    "Detodito BBQ 165gr": [8500, 20],
-    "Detodito Mix 165gr": [8500, 20],
-    "Chicles Trident": [2000, 20],
-    "Encendedor": [1000, 20],
-    "Bonfiest": [4000, 20],
-    "Preservativos": [3000, 20],
-    "Sildenafil Viagra": [7000, 20],
-    "Salchichas": [7000, 20],
-    "Bombombunes": [600, 20],
     "Hielo": [2000, 20]
 }
-    
+
+# ---------------------------------------------------------
+# 3. FUNCIONES
+# ---------------------------------------------------------
+
+def cargar_productos():
     if not os.path.exists(ARCHIVO_DB):
+        # Si no existe, creamos la DB con los productos iniciales
         data_list = [{"Producto": p, "Precio": v[0], "Stock": v[1]} for p, v in PRODUCTOS_INICIALES_DICT.items()]
         df = pd.DataFrame(data_list)
         df.to_csv(ARCHIVO_DB, index=False)
@@ -154,6 +80,7 @@ PRODUCTOS_INICIALES_DICT = {
         try:
             return pd.read_csv(ARCHIVO_DB)
         except:
+            # Si falla, recreamos estructura vacía o base
             return pd.DataFrame(columns=["Producto","Precio","Stock"])
 
 def guardar_productos(df):
@@ -182,7 +109,7 @@ def calcular_tarifa_domicilio(direccion_texto=None, coordenadas_gps=None):
             try:
                 location = geolocator.reverse(f"{coords_destino[0]}, {coords_destino[1]}", timeout=5)
                 if location:
-                    # Intentar limpiar la dirección para que no sea tan larga
+                    # Intentar limpiar la dirección
                     direccion_detectada = location.address.split(",")[0]
             except:
                 direccion_detectada = "Ubicación GPS Exacta"
@@ -222,14 +149,14 @@ df_productos = cargar_productos()
 PRODUCTOS_DISPONIBLES = dict(zip(df_productos["Producto"], df_productos["Precio"]))
 
 # ---------------------------------------------------------
-# 3. INTERFAZ
+# 4. INTERFAZ
 # ---------------------------------------------------------
 st.title("🔥 Fenix Pedidos")
 numero_factura_actual = obtener_siguiente_factura()
 
 # --- VARIABLES DE ESTADO (MEMORIA) ---
 if 'direccion_final' not in st.session_state: st.session_state['direccion_final'] = ""
-if 'link_ubicacion' not in st.session_state: st.session_state['link_ubicacion'] = "" # <--- NUEVA VARIABLE
+if 'link_ubicacion' not in st.session_state: st.session_state['link_ubicacion'] = ""
 if 'valor_domi_calculado' not in st.session_state: st.session_state['valor_domi_calculado'] = 7000
 
 # --- FORMULARIO DATOS ---
@@ -258,8 +185,8 @@ with st.expander("👤 Datos del Cliente", expanded=True):
             st.session_state['last_gps'] = coords
             
             # 1. Crear Link de Google Maps
-            link_maps = f"https://maps.google.com/?q={lat},{lon}"
-            st.session_state['link_ubicacion'] = link_maps # <--- AQUÍ SE GUARDA EL LINK
+            link_maps = f"http://googleusercontent.com/maps.google.com/?q={lat},{lon}"
+            st.session_state['link_ubicacion'] = link_maps
             
             # 2. Calcular Precio y buscar nombre de calle
             with st.spinner("📍 Obteniendo ubicación..."):
@@ -290,7 +217,7 @@ with st.expander("👤 Datos del Cliente", expanded=True):
 st.divider()
 
 # ---------------------------------------------------------
-# 4. CARRITO DE COMPRAS
+# 5. CARRITO DE COMPRAS
 # ---------------------------------------------------------
 st.subheader("🛒 Carrito")
 
@@ -347,7 +274,7 @@ if not st.session_state.carrito.empty:
         st.rerun()
 
 # ---------------------------------------------------------
-# 5. TOTALES Y ENVÍO
+# 6. TOTALES Y ENVÍO
 # ---------------------------------------------------------
 clean_df = st.session_state.carrito.copy()
 suma_productos = int(clean_df["Total"].sum()) if not clean_df.empty else 0
@@ -357,7 +284,7 @@ st.subheader("🛵 Envío y Totales")
 c_geo1, c_geo2 = st.columns([2, 1])
 with c_geo2:
     st.write("")
-    # Botón de recalculo manual por si cambiaron la dirección escrita a mano
+    # Botón de recalculo manual
     if st.button("📍 Recalcular Manual", use_container_width=True):
         if st.session_state['direccion_final']:
              t, d, _ = calcular_tarifa_domicilio(direccion_texto=st.session_state['direccion_final'])
@@ -401,8 +328,8 @@ if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
             "Domiciliario": domiciliario,
             "Celular": celular,
             "Barrio": barrio,
-            "Direccion": st.session_state['direccion_final'], # Enviamos la dirección final
-            "Ubicacion": st.session_state['link_ubicacion'],  # Enviamos el LINK DE MAPS
+            "Direccion": st.session_state['direccion_final'],
+            "Ubicacion": st.session_state['link_ubicacion'],
             "Observaciones": observaciones,
             "Productos": prods
         }
@@ -433,7 +360,6 @@ if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
             st.rerun()
         else:
             st.error("Error al enviar")
-
 
 
 
