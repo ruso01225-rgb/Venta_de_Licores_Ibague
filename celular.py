@@ -2,29 +2,31 @@ import streamlit as st
 import requests
 import pandas as pd
 import os
+from geopy.geocoders import Nominatim
+from geopy.distance import geodesic
+from streamlit_js_eval import get_geolocation
 
 # ---------------------------------------------------------
 # 1. CONFIGURACIÓN
 # ---------------------------------------------------------
 st.set_page_config(page_title="Ibaguiar Pedidos", page_icon="🔥", layout="centered")
 
-
-
 # =========================================================
-# 🟢 INICIO DE LA APLICACIÓN
+# ⚙️ VARIABLES Y CONFIGURACIÓN
 # =========================================================
 
-# ⚠️ TU URL DE GOOGLE APPS SCRIPT
+# TU UBICACIÓN (Ibagué)
+UBICACION_BASE = (4.4440508, -75.208976)
+
 URL_SHEETS = "https://script.google.com/macros/s/AKfycbzEa9UwrBhOVaA1QR6ui5VRUTz1oGSzV-WZ7MIN5YbdJUsBrZRUv9l80Jl1kqAbheNDlw/exec"
-
-# ARCHIVOS LOCALES
 ARCHIVO_DB = "productos_db.csv"
 ARCHIVO_CONSECUTIVO = "consecutivo.txt"
-PASSWORD_ADMIN = "1234"  
+PASSWORD_ADMIN = "1234"
 
 # ---------------------------------------------------------
-# 2. LISTA MAESTRA INICIAL
+# 2. FUNCIONES
 # ---------------------------------------------------------
+
 PRODUCTOS_INICIALES_DICT = {
     # --- Aguardientes ---
     "Aguardiente Garrafa tapa roja": [98000, 20],
@@ -142,12 +144,7 @@ PRODUCTOS_INICIALES_DICT = {
     "Bombombunes": [600, 20],
     "Hielo": [2000, 20]
 }
-
-# ---------------------------------------------------------
-# 3. GESTIÓN DE BASE DE DATOS Y CONSECUTIVO
-# ---------------------------------------------------------
-
-def cargar_productos():
+    
     if not os.path.exists(ARCHIVO_DB):
         data_list = [{"Producto": p, "Precio": v[0], "Stock": v[1]} for p, v in PRODUCTOS_INICIALES_DICT.items()]
         df = pd.DataFrame(data_list)
@@ -157,10 +154,7 @@ def cargar_productos():
         try:
             return pd.read_csv(ARCHIVO_DB)
         except:
-            data_list = [{"Producto": p, "Precio": v[0], "Stock": v[1]} for p, v in PRODUCTOS_INICIALES_DICT.items()]
-            df = pd.DataFrame(data_list)
-            df.to_csv(ARCHIVO_DB, index=False)
-            return df
+            return pd.DataFrame(columns=["Producto","Precio","Stock"])
 
 def guardar_productos(df):
     df.to_csv(ARCHIVO_DB, index=False)
@@ -174,135 +168,137 @@ def obtener_siguiente_factura():
 def actualizar_factura_siguiente(nuevo_numero):
     with open(ARCHIVO_CONSECUTIVO, "w") as f: f.write(str(nuevo_numero))
 
-# Inicialización
-df_productos = cargar_productos()
-PRODUCTOS_DISPONIBLES = dict(zip(df_productos["Producto"], df_productos["Precio"]))
-STOCK_DISPONIBLE = dict(zip(df_productos["Producto"], df_productos["Stock"]))
+def calcular_tarifa_domicilio(direccion_texto=None, coordenadas_gps=None):
+    """Calcula tarifa y devuelve dirección formateada"""
+    geolocator = Nominatim(user_agent="fenix_app_v3")
+    coords_destino = None
+    direccion_detectada = direccion_texto
 
-# ---------------------------------------------------------
-# 4. PANEL DE ADMINISTRACIÓN (SIDEBAR)
-# ---------------------------------------------------------
-with st.sidebar:
-    st.header("⚙️ Admin")
-    activar_admin = st.checkbox("Administrar Productos")
-    
-    if activar_admin:
-        password = st.text_input("Contraseña", type="password")
+    try:
+        # CASO A: Coordenadas GPS
+        if coordenadas_gps:
+            coords_destino = coordenadas_gps
+            # Reverse Geocoding para hallar el nombre de la calle
+            try:
+                location = geolocator.reverse(f"{coords_destino[0]}, {coords_destino[1]}", timeout=5)
+                if location:
+                    # Intentar limpiar la dirección para que no sea tan larga
+                    direccion_detectada = location.address.split(",")[0]
+            except:
+                direccion_detectada = "Ubicación GPS Exacta"
+
+        # CASO B: Texto manual
+        elif direccion_texto and len(direccion_texto) > 3:
+            busqueda = f"{direccion_texto}, Ibagué, Tolima, Colombia"
+            location = geolocator.geocode(busqueda, timeout=5)
+            if location:
+                coords_destino = (location.latitude, location.longitude)
         
-        if password == PASSWORD_ADMIN:
-            st.success("Acceso Admin")
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Stock", "Crear", "Editar", "Borrar", "CSV"])
+        # CÁLCULO
+        if coords_destino:
+            distancia_km = geodesic(UBICACION_BASE, coords_destino).kilometers
             
-            with tab1:
-                st.info("Editar Stock:")
-                df_stock_edit = st.data_editor(
-                    df_productos[["Producto", "Stock"]],
-                    column_config={
-                        "Producto": st.column_config.TextColumn(disabled=True),
-                        "Stock": st.column_config.NumberColumn("Unds", min_value=0, step=1)
-                    },
-                    hide_index=True,
-                    key="editor_stock_admin"
-                )
-                if st.button("💾 Guardar"):
-                    for index, row in df_stock_edit.iterrows():
-                        df_productos.loc[df_productos["Producto"] == row["Producto"], "Stock"] = row["Stock"]
-                    guardar_productos(df_productos)
-                    st.success("Guardado")
-                    st.rerun()
+            # --- TARIFA: Base 4000 + 1500 x Km ---
+            tarifa = 4000 + (distancia_km * 1500)
+            tarifa = round(tarifa / 100) * 100
+            if tarifa < 5000: tarifa = 5000
+            
+            return int(tarifa), round(distancia_km, 2), direccion_detectada
+        else:
+            return None, 0, direccion_texto
 
-            with tab2:
-                new_name = st.text_input("Nombre", key="new_name")
-                c_n1, c_n2 = st.columns(2)
-                with c_n1: new_price = st.number_input("Precio", min_value=0, step=500, key="new_price")
-                with c_n2: new_stock = st.number_input("Stock", min_value=0, step=1, key="new_stock_init")
-                
-                if st.button("Crear"):
-                    if new_name and new_name not in df_productos["Producto"].values:
-                        nuevo_row = pd.DataFrame([{"Producto": new_name, "Precio": new_price, "Stock": new_stock}])
-                        df_productos = pd.concat([df_productos, nuevo_row], ignore_index=True)
-                        guardar_productos(df_productos)
-                        st.success("Creado")
-                        st.rerun()
+    except Exception as e:
+        return None, 0, direccion_texto
 
-            with tab3:
-                lista_prods = sorted(list(df_productos["Producto"]))
-                prod_a_editar = st.selectbox("Editar:", ["Seleccionar..."] + lista_prods)
-                if prod_a_editar != "Seleccionar...":
-                    row = df_productos[df_productos["Producto"] == prod_a_editar].iloc[0]
-                    edit_name = st.text_input("Nombre", value=prod_a_editar)
-                    c_e1, c_e2 = st.columns(2)
-                    with c_e1: e_price = st.number_input("Precio", value=int(row["Precio"]), step=500)
-                    with c_e2: e_stock = st.number_input("Stock", value=int(row.get("Stock",0)), step=1)
-                    if st.button("Actualizar"):
-                        idx = df_productos.index[df_productos["Producto"] == prod_a_editar][0]
-                        df_productos.at[idx, "Producto"] = edit_name
-                        df_productos.at[idx, "Precio"] = e_price
-                        df_productos.at[idx, "Stock"] = e_stock
-                        guardar_productos(df_productos)
-                        st.rerun()
-
-            with tab4:
-                prod_del = st.selectbox("Borrar:", ["Seleccionar..."] + sorted(list(df_productos["Producto"])), key="del_sel")
-                if st.button("Eliminar"):
-                    if prod_del != "Seleccionar...":
-                        df_productos = df_productos[df_productos["Producto"] != prod_del]
-                        guardar_productos(df_productos)
-                        st.rerun()
-
-            with tab5:
-                with open(ARCHIVO_DB, "rb") as f:
-                    st.download_button("⬇️ Descargar CSV", f, "inventario.csv", "text/csv")
-                uploaded = st.file_uploader("⬆️ Subir CSV", type=["csv"])
-                if uploaded and st.button("Reemplazar"):
-                    try:
-                        df_new = pd.read_csv(uploaded)
-                        if all(c in df_new.columns for c in ["Producto","Precio","Stock"]):
-                            guardar_productos(df_new)
-                            st.rerun()
-                    except: pass
-        elif password:
-            st.error("Error")
-
-# ---------------------------------------------------------
-# 5. INTERFAZ (OPTIMIZADA PARA MÓVIL)
-# ---------------------------------------------------------
 def enviar_a_sheets(data):
     try:
         headers = {"Content-Type": "application/json"}
-        resp = requests.post(URL_SHEETS, json=data, headers=headers, timeout=20)
+        resp = requests.post(URL_SHEETS, json=data, headers=headers, timeout=15)
         return resp
     except Exception as e: return f"Error: {e}"
 
+# INICIALIZACIÓN
+df_productos = cargar_productos()
+PRODUCTOS_DISPONIBLES = dict(zip(df_productos["Producto"], df_productos["Precio"]))
+
+# ---------------------------------------------------------
+# 3. INTERFAZ
+# ---------------------------------------------------------
 st.title("🔥 Fenix Pedidos")
 numero_factura_actual = obtener_siguiente_factura()
 
-# --- DATOS CLIENTE (VERTICAL STACK) ---
-with st.expander("👤 Datos del Cliente", expanded=False):
+# --- VARIABLES DE ESTADO (MEMORIA) ---
+if 'direccion_final' not in st.session_state: st.session_state['direccion_final'] = ""
+if 'link_ubicacion' not in st.session_state: st.session_state['link_ubicacion'] = "" # <--- NUEVA VARIABLE
+if 'valor_domi_calculado' not in st.session_state: st.session_state['valor_domi_calculado'] = 7000
+
+# --- FORMULARIO DATOS ---
+with st.expander("👤 Datos del Cliente", expanded=True):
     c_f, c_t = st.columns(2)
     with c_f: st.text_input("Factura #", value=str(numero_factura_actual), disabled=True)
     with c_t: celular = st.text_input("Celular")
     
-    # Apilados para mejor uso en móvil
+    # --- SECCIÓN GPS ---
+    st.write("📍 **Dirección y Ubicación:**")
+    col_btn_gps, col_input_dir = st.columns([1, 4])
+    
+    gps_data = None
+    with col_btn_gps:
+        # Botón que pide permiso al celular
+        gps_data = get_geolocation(component_key='get_gps')
+
+    # Lógica cuando llega el GPS
+    if gps_data:
+        lat = gps_data['coords']['latitude']
+        lon = gps_data['coords']['longitude']
+        coords = (lat, lon)
+        
+        # Si las coordenadas cambiaron, recalculamos
+        if 'last_gps' not in st.session_state or st.session_state['last_gps'] != coords:
+            st.session_state['last_gps'] = coords
+            
+            # 1. Crear Link de Google Maps
+            link_maps = f"https://maps.google.com/?q={lat},{lon}"
+            st.session_state['link_ubicacion'] = link_maps # <--- AQUÍ SE GUARDA EL LINK
+            
+            # 2. Calcular Precio y buscar nombre de calle
+            with st.spinner("📍 Obteniendo ubicación..."):
+                t, d, dir_txt = calcular_tarifa_domicilio(coordenadas_gps=coords)
+                if t:
+                    st.session_state['valor_domi_calculado'] = t
+                    st.session_state['direccion_final'] = dir_txt
+                    st.toast("Ubicación exacta cargada", icon="✅")
+
+    with col_input_dir:
+        # Input Dirección (se llena solo o manual)
+        direccion = st.text_input("Dirección", value=st.session_state['direccion_final'], key="input_dir_user")
+        if direccion != st.session_state['direccion_final']:
+            st.session_state['direccion_final'] = direccion
+
+    # --- CAMPOS RESTANTES ---
+    # Input Ubicación (se llena con el LINK automáticamente)
+    ubicacion = st.text_input("Ubicación (Link GPS)", value=st.session_state['link_ubicacion'], placeholder="El link aparecerá aquí automáticamente")
+    
+    # Permitir edición manual del link si el usuario quiere
+    if ubicacion != st.session_state['link_ubicacion']:
+        st.session_state['link_ubicacion'] = ubicacion
+
     domiciliario = st.selectbox("Domiciliario", ["Sin Domicilio", "Juan", "Pedro", "Empresa"])
     barrio = st.text_input("Barrio")
-    direccion = st.text_input("Dirección")
-    ubicacion = st.text_input("Ubicación")
-    observaciones = st.text_area("Notas", height=68)
+    observaciones = st.text_area("Notas")
 
 st.divider()
 
 # ---------------------------------------------------------
-# 6. PEDIDO (INTERFAZ MÓVIL)
+# 4. CARRITO DE COMPRAS
 # ---------------------------------------------------------
-st.subheader("🛒 Realizar Pedido")
+st.subheader("🛒 Carrito")
 
 if "carrito" not in st.session_state:
     st.session_state.carrito = pd.DataFrame(columns=["Producto","Precio","Cantidad","Total"])
     st.session_state.carrito = st.session_state.carrito.astype({"Producto":"str","Precio":"int","Cantidad":"int","Total":"int"})
 
-# --- BUSCADOR OPTIMIZADO ---
-# Fila 1: Producto (Ancho completo)
+# Buscador
 lista_ordenada = sorted(list(PRODUCTOS_DISPONIBLES.keys()))
 opc = ["Seleccionar..."] + lista_ordenada
 def fmt(x):
@@ -312,83 +308,67 @@ def fmt(x):
 
 prod_sel = st.selectbox("Buscar Producto", opc, format_func=fmt)
 
-# Fila 2: Cantidad y Botón (Mitad y mitad)
 c_cant, c_add = st.columns([1, 1])
-with c_cant:
-    cant_sel = st.number_input("Cantidad", min_value=1, value=1)
-with c_add:
-    st.write("") # Espaciador para alinear botón
-    st.write("") 
-    add_btn = st.button("➕ AGREGAR", type="primary", use_container_width=True)
+with c_cant: cant_sel = st.number_input("Cantidad", min_value=1, value=1)
+with c_add: 
+    st.write("")
+    st.write("")
+    if st.button("➕ AGREGAR", use_container_width=True) and prod_sel != "Seleccionar...":
+        precio = int(PRODUCTOS_DISPONIBLES[prod_sel])
+        df = st.session_state.carrito.copy()
+        if prod_sel in df["Producto"].values:
+            idx = df.index[df["Producto"] == prod_sel][0]
+            df.loc[idx, "Cantidad"] = int(df.loc[idx, "Cantidad"]) + cant_sel
+            df.loc[idx, "Total"] = df.loc[idx, "Precio"] * df.loc[idx, "Cantidad"]
+        else:
+            nuevo = pd.DataFrame([{"Producto": prod_sel, "Precio": precio, "Cantidad": cant_sel, "Total": precio * cant_sel}])
+            df = pd.concat([df, nuevo], ignore_index=True)
+        st.session_state.carrito = df
+        st.rerun()
 
-if add_btn and prod_sel != "Seleccionar...":
-    precio = int(PRODUCTOS_DISPONIBLES[prod_sel])
-    cant = int(cant_sel)
-    df = st.session_state.carrito.copy()
-    if prod_sel in df["Producto"].values:
-        idx = df.index[df["Producto"] == prod_sel][0]
-        df.loc[idx, "Cantidad"] = int(df.loc[idx, "Cantidad"]) + cant
-        df.loc[idx, "Precio"] = precio 
-        df.loc[idx, "Total"] = df.loc[idx, "Precio"] * df.loc[idx, "Cantidad"]
-    else:
-        nuevo = pd.DataFrame([{"Producto": prod_sel, "Precio": precio, "Cantidad": cant, "Total": precio * cant}])
-        df = pd.concat([df, nuevo], ignore_index=True)
-    st.session_state.carrito = df
-    st.rerun()
-
-# ---------------------------------------------------------
-# 7. CARRITO TIPO TARJETA (MEJOR PARA MÓVIL)
-# ---------------------------------------------------------
-st.markdown("### Resumen del Pedido")
-
-if st.session_state.carrito.empty:
-    st.info("El carrito está vacío")
-else:
+# Mostrar Carrito
+if not st.session_state.carrito.empty:
     idx_borrar = None
     for i, row in st.session_state.carrito.iterrows():
-        # Tarjeta de producto
         with st.container():
-            # Línea 1: Nombre del producto destacado
             st.markdown(f"**{row['Producto']}**")
-            
-            # Línea 2: Controles en una sola fila
             c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-            
-            # Precio Unitario
-            c1.caption("Precio")
             c1.write(f"${row['Precio']:,.0f}")
-            
-            # Cantidad Editable
-            nueva_cant = c2.number_input("Cant", min_value=1, value=int(row["Cantidad"]), key=f"q_{i}", label_visibility="collapsed")
-            if nueva_cant != row["Cantidad"]:
-                st.session_state.carrito.at[i, "Cantidad"] = nueva_cant
-                st.session_state.carrito.at[i, "Total"] = nueva_cant * row["Precio"]
+            nc = c2.number_input("Cant", min_value=1, value=int(row["Cantidad"]), key=f"q_{i}", label_visibility="collapsed")
+            if nc != row["Cantidad"]:
+                st.session_state.carrito.at[i, "Cantidad"] = nc
+                st.session_state.carrito.at[i, "Total"] = nc * row["Precio"]
                 st.rerun()
-            
-            # Total
-            total_fila = nueva_cant * row["Precio"]
-            c3.caption("Total")
-            c3.write(f"**${total_fila:,.0f}**")
-            
-            # Borrar
-            c4.write("")
-            if c4.button("🗑️", key=f"d_{i}"):
-                idx_borrar = i
-            
+            c3.write(f"**${nc*row['Precio']:,.0f}**")
+            if c4.button("🗑️", key=f"d_{i}"): idx_borrar = i
         st.divider()
-
     if idx_borrar is not None:
         st.session_state.carrito = st.session_state.carrito.drop(idx_borrar).reset_index(drop=True)
         st.rerun()
 
 # ---------------------------------------------------------
-# 8. TOTALES Y PAGO
+# 5. TOTALES Y ENVÍO
 # ---------------------------------------------------------
 clean_df = st.session_state.carrito.copy()
 suma_productos = int(clean_df["Total"].sum()) if not clean_df.empty else 0
 
-valor_domicilio = st.number_input("🛵 Domicilio", min_value=0, step=1000, value=7000)
-medio_pago = st.selectbox("💳 Medio de Pago", ["Efectivo", "Nequi", "DaviPlata", "Datafono"], key="medio_pago_input")
+st.subheader("🛵 Envío y Totales")
+
+c_geo1, c_geo2 = st.columns([2, 1])
+with c_geo2:
+    st.write("")
+    # Botón de recalculo manual por si cambiaron la dirección escrita a mano
+    if st.button("📍 Recalcular Manual", use_container_width=True):
+        if st.session_state['direccion_final']:
+             t, d, _ = calcular_tarifa_domicilio(direccion_texto=st.session_state['direccion_final'])
+             if t:
+                 st.session_state['valor_domi_calculado'] = t
+                 st.toast(f"Distancia aprox: {d}km")
+
+with c_geo1:
+    valor_domicilio = st.number_input("Costo Domicilio", value=st.session_state['valor_domi_calculado'], step=500)
+
+medio_pago = st.selectbox("💳 Medio de Pago", ["Efectivo", "Nequi", "DaviPlata", "Datafono"])
 
 total_final = suma_productos + int(valor_domicilio)
 
@@ -400,38 +380,29 @@ TOTAL: ${total_final:,.0f}
 
 total_datafono = ""
 if medio_pago == "Datafono":
-    valor_dat = int(total_final * 1.06)
-    st.warning(f"Pago con Datafono (+6%): **${valor_dat:,.0f}**")
-    total_datafono = st.number_input("Cobrar en Datafono:", value=valor_dat)
+    v_dat = int(total_final * 1.06)
+    st.warning(f"Con Datafono (+6%): ${v_dat:,.0f}")
+    total_datafono = st.number_input("Cobrar:", value=v_dat)
 
-# ---------------------------------------------------------
-# 9. ENVIAR
-# ---------------------------------------------------------
 if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
     if clean_df.empty:
-        st.error("⚠️ Carrito vacío")
+        st.error("Carrito vacío")
     else:
-        # Preparar JSON
         prods = []
         for _, row in clean_df.iterrows():
-            prods.append({
-                "Producto": str(row["Producto"]),
-                "Precio": str(row["Precio"]),
-                "Cantidad": str(row["Cantidad"]),
-                "Total": str(row["Total"])
-            })
-            
+            prods.append({"Producto": str(row["Producto"]), "Cantidad": str(row["Cantidad"]), "Total": str(row["Total"])})
+        
         data_json = {
             "MedioPago": medio_pago,
             "ValorTotalV": str(total_final),
             "ValorDomi": str(valor_domicilio),
-            "TotalData": total_datafono,
+            "TotalData": str(total_datafono),
             "Factura": str(numero_factura_actual),
             "Domiciliario": domiciliario,
             "Celular": celular,
             "Barrio": barrio,
-            "Direccion": direccion,
-            "Ubicacion": ubicacion,
+            "Direccion": st.session_state['direccion_final'], # Enviamos la dirección final
+            "Ubicacion": st.session_state['link_ubicacion'],  # Enviamos el LINK DE MAPS
             "Observaciones": observaciones,
             "Productos": prods
         }
@@ -441,9 +412,9 @@ if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
         
         if hasattr(res, 'status_code') and res.status_code == 200:
             st.balloons()
-            st.success(f"✅ Pedido #{numero_factura_actual} enviado!")
+            st.success("Enviado con éxito")
             
-            # Actualizar Stock
+            # Descargar Stock
             for item in prods:
                 pn = item["Producto"]
                 cant = int(item["Cantidad"])
@@ -452,16 +423,17 @@ if st.button("🚀 ENVIAR PEDIDO", type="primary", use_container_width=True):
                     curr = int(df_productos.at[idx, "Stock"])
                     df_productos.at[idx, "Stock"] = max(0, curr - cant)
             guardar_productos(df_productos)
-            
-            # Actualizar Factura
             actualizar_factura_siguiente(numero_factura_actual + 1)
             
-            # Limpiar
+            # Reset
             st.session_state.carrito = pd.DataFrame(columns=["Producto","Precio","Cantidad","Total"])
-            if "medio_pago_input" in st.session_state: del st.session_state["medio_pago_input"]
+            st.session_state['direccion_final'] = ""
+            st.session_state['link_ubicacion'] = ""
+            st.session_state['valor_domi_calculado'] = 7000
             st.rerun()
         else:
-            st.error("❌ Error al enviar")
+            st.error("Error al enviar")
+
 
 
 
