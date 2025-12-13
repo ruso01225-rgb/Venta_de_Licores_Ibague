@@ -253,7 +253,7 @@ with st.expander("👤 Datos del Cliente", expanded=True):
     c_f, c_t = st.columns(2)
     with c_f: 
         # CAMPO MANUAL DE FACTURA
-        factura_manual = st.text_input("Factura # (5 dígitos)", max_chars=5, placeholder="Ej: 03001")
+        factura_manual = st.text_input("Factura # (*Obligatorio colocar 5 dígitos)", max_chars=5, placeholder="Ej: 03001")
     with c_t: celular = st.text_input("Celular", key="input_celular") 
     
     st.markdown("---")
@@ -503,6 +503,7 @@ else:
                 st.rerun()
             else:
                 st.error("Error al enviar")
+
 
 
 
